@@ -295,9 +295,118 @@ correspondiente.
 
 **Commit**: `feat: T015-T018 - selector de servicio, formulario de alta y navegacion`
 
-### T019-T022 — (en progreso)
+### T019-T022 — EstadoSelector, TurnoForm (edición) y pantalla de editar turno
 
+**Prompt usado**: "Dale, segui con las tareas T019, T020, T021 y T022. Son el EstadoSelector,
+extender el TurnoForm para que soporte modo edición, la pantalla de editar turno y conectar el
+botón 'Editar' desde el detalle. Fijate en tasks.md, plan.md y en lo que ya está armado antes de
+arrancar."
 
+**Qué generó**:
+- `components/EstadoSelector.js`: selector de estado (chips), usando `ESTADOS_TURNO_LISTA`, con
+  el mismo estilo visual que `ServicioSelector` para mantener consistencia de UX.
+- `components/TurnoForm.js` extendido: agrega `modoEdicion = Boolean(turnoInicial)`; en ese modo
+  precarga el estado del turno y muestra `EstadoSelector` (oculto en modo alta); el botón cambia
+  su texto a "Guardar cambios"; el campo `estado` solo se incluye en los datos enviados cuando
+  está en modo edición (en alta lo asigna el service automáticamente).
+- `app/turno/editar/[id].js` (nuevo, ruta hermana de `turno/[id].js`, no anidada, tal como se
+  definió en el plan): precarga el turno con `getTurnoById(id)`, usa `TurnoForm` en modo edición,
+  llama a `updateTurno(id, datos)` y vuelve al detalle con `router.back()`.
+- `app/turno/[id].js`: se agregó el botón "Editar" en el header (vía `Stack.Screen` con
+  `headerRight` dinámico) que navega a `/turno/editar/${id}`.
 
-## 5. Conclusiones
+**Qué corregimos**: mismo problema detectado en T018 pero ahora en la pantalla de detalle — se
+cambió `useEffect` por `useFocusEffect`, porque al volver de editar un turno (`router.back()`),
+expo-router no remonta la pantalla de detalle, así que sin este cambio seguiría mostrando los
+datos viejos hasta reiniciar la app, violando FR-021 (los cambios deben reflejarse de inmediato).
+
+**Cómo lo verificamos**: `eslint` sin errores en los 4 archivos, y prueba manual en el teléfono:
+editar un turno cambiando solo el estado, guardar, y confirmar que el cambio se ve reflejado
+tanto en el detalle como en el listado sin reiniciar la app; repetir las validaciones de campos
+vacíos y fecha inválida ya probadas en el alta.
+
+**Commit**: `feat: T019-T022 - EstadoSelector, TurnoForm modo edicion y pantalla de editar turno`
+
+**Con esto quedan completas las 4 historias de usuario (T001-T022).** Falta la fase de Polish
+(T023-T025): revisión de consistencia de mensajes de error, confirmación de manejo de estados de
+carga en las 4 pantallas, y prueba manual completa contra `quickstart.md`.
+
+### T023-T025 — Polish: mensajes, estados de carga y validación end-to-end
+
+**Prompt usado**: "Dale, seguí con las tareas T023, T024 y T025."
+
+**T023 — Consistencia de mensajes de error**: se detectó que dos mensajes de `TurnoForm.js`
+usaban modo imperativo ("Ingresá...", "Seleccioná...") y el de fecha/hora era una oración
+declarativa distinta ("La fecha y hora no pueden ser..."). Se unificó todo a modo imperativo
+("Elegí una fecha y hora que no sean anteriores al momento actual.").
+
+**T024 — Estados de carga**: se repasaron las 4 pantallas; todas ya manejaban `LoadingState`/
+`EmptyState` explícitamente, sin pantallas en blanco. No hizo falta modificar código.
+
+**T025 — Validación end-to-end**: sin acceso a emulador en el entorno de la IA, se hizo en su
+lugar: lint completo, un `npx expo export` real para forzar el bundling de las 4 pantallas, y un
+trace manual del código contra cada escenario de `quickstart.md`. Esto encontró y corrigió 3
+problemas reales que la revisión de archivos sueltos no había detectado:
+
+1. **El proyecto nunca había hecho un build completo**: faltaban `babel.config.js`,
+   `babel-preset-expo`, `expo-linking` y `react-native-safe-area-context` (dependencias que
+   `expo-router` necesita), y `react-native-screens` había quedado en una versión incompatible
+   con el SDK 54. Se instalaron/fijaron las versiones correctas y se agregó `babel.config.js`.
+2. **Bug de validación en el alta**: la fecha/hora por defecto se precargaba como "ahora" al
+   abrir el formulario; si el barbero tardaba más de unos segundos en completarlo, esa fecha
+   quedaba en el pasado respecto al momento de guardar y rechazaba turnos válidos. Se agregó un
+   margen de tolerancia de 5 minutos.
+3. **Conflicto entre `data-model.md` y `spec.md`**: la regla "no permitir fecha pasada" heredada
+   del alta impedía cumplir el escenario central de Historia 4 (marcar un turno como
+   "completado" después de que su horario ya pasó, sin tocar la fecha). Se decidió que esa
+   validación solo aplique al crear un turno, no al editarlo.
+
+**Bug adicional encontrado al probar en el teléfono (no detectado por el análisis de código)**:
+al probar la app en un dispositivo Android real, se encontraron dos problemas visuales:
+- El header del listado mostraba **"index"** en vez de "Agenda de Turnos" — causado por usar
+  `export const options` estático en `app/index.js`, que `expo-router` no aplica correctamente en
+  ese contexto. Se corrigió reemplazándolo por `<Stack.Screen options={...}>` renderizado dentro
+  del componente, el mismo patrón ya usado en `app/turno/[id].js`.
+- **El texto se cortaba en el último carácter** en varios lugares ("10:0" en vez de "10:00",
+  "Pendient" en vez de "Pendiente", "Cort" en vez de "Corte"). Se investigó la causa (no era un
+  problema de ancho fijo ni de estilos): es un bug conocido de React Native 0.81 en Android,
+  donde el motor de texto mide el ancho con el "advance width" pero pinta con el ancho real del
+  glifo, recortando el último carácter en texto con negrita/seminegrita. Se aplicó el fix de la
+  comunidad, `textBreakStrategy="simple"`, en los `Text` afectados de `TurnoCard.js`,
+  `ServicioSelector.js` y `EstadoSelector.js`.
+
+**Cómo lo verificamos**: `eslint` sin errores, `npx expo export` bundlea limpio (992 módulos), y
+prueba manual completa en un teléfono Android real, confirmando que el header y los textos ya no
+se cortan.
+
+**Commit**: `fix: T023-T025 polish - titulo de header y texto cortado en Android (RN 0.81)`
+
+**Corrección adicional (segundo intento)**: el primer fix (`textBreakStrategy="simple"` aplicado
+a mano en `TurnoCard.js`, `ServicioSelector.js` y `EstadoSelector.js`) **no resolvió el
+problema** — al probar de nuevo en el teléfono, el texto seguía cortándose exactamente igual en
+todos lados ("10:0", "Pendient", "Cort", "Dí", "Seman", etc.), incluyendo componentes que ese
+primer intento no había tocado. Se identificó que el bug afectaba a **todo texto corto en
+negrita de la app**, no a componentes puntuales, así que aplicar el arreglo componente por
+componente era propenso a dejar casos sin cubrir (como efectivamente pasó).
+
+**Solución definitiva**: se creó un componente wrapper, `components/AppText.js`, que envuelve el
+`Text` de React Native aplicando el arreglo (`textBreakStrategy="simple"` + ajuste de fuente) una
+única vez. Se reemplazaron **todos** los usos de `Text` por `AppText` en toda la app
+(`app/index.js`, `app/turno/[id].js`, `app/turno/nuevo.js`, `app/turno/editar/[id].js`,
+`components/TurnoCard.js`, `components/ServicioSelector.js`, `components/EstadoSelector.js`,
+`components/TurnoForm.js`, `components/EmptyState.js`), en vez de aplicar el fix a mano en cada
+archivo. Esto centraliza la solución: cualquier texto nuevo que se agregue a futuro usando
+`AppText` en vez de `Text` queda arreglado automáticamente.
+
+**Cómo lo verificamos**: prueba manual completa en el teléfono, confirmando que ya no se corta
+ningún texto en ninguna pantalla (listado, detalle, alta, edición), incluyendo los chips de
+servicio/estado y los tabs Día/Semana.
+
+**Commit**: `fix: crear AppText wrapper para solucionar texto cortado en toda la app (RN 0.81 Android)`
+
+**Con esto quedan completas las 25 tareas planificadas (T001-T025), con el bug de texto cortado
+resuelto de forma definitiva y centralizada.**
+
+---
+
 
