@@ -261,9 +261,43 @@ día/semana desde el que se navegó.
 
 **Commit**: `feat: T013-T014 - pantalla de detalle y navegacion desde el listado`
 
-### T015-T018 — (en progreso)
+### T015-T018 — ServicioSelector, TurnoForm (alta) y pantalla de nuevo turno
+
+**Prompt usado**: "Dale, segui con las tareas T015, T016, T017 y T018. Son el ServicioSelector,
+el TurnoForm en modo alta, la pantalla de nuevo turno y conectar la navegación desde el listado.
+Fijate en tasks.md, plan.md y en lo que ya está armado en services/, components/ y app/ antes de
+arrancar."
+
+**Qué generó**:
+- `components/ServicioSelector.js`: carga `getServicios()` y muestra el catálogo como chips
+  seleccionables, con su propio indicador de carga chico (no el `LoadingState` de pantalla
+  completa, para no romper el layout del formulario mientras carga).
+- `components/TurnoForm.js`: formulario compartido de alta/edición, ya preparado para recibir un
+  `turnoInicial` opcional (precarga) pensando en la futura edición (US4/T020), aunque todavía sin
+  el selector de estado. Incluye campo cliente, `ServicioSelector`, selectores de fecha/hora con
+  `@react-native-community/datetimepicker`, y validación de campos obligatorios + fecha/hora no
+  pasada, con mensajes de error específicos (FR-006, FR-007, FR-008).
+- `app/turno/nuevo.js`: usa `TurnoForm` en modo alta, llama a `createTurno(datos)` al confirmar,
+  muestra `LoadingState` durante el guardado simulado y vuelve al listado con `router.back()`.
+- `app/index.js`: se agregó el botón "+ Nuevo" en el header (navega a `turno/nuevo`).
+
+**Qué corregimos**: se detectó que el listado usaba `useEffect` para cargar los datos una sola
+vez al montar la pantalla — pero como expo-router no vuelve a montar la pantalla anterior al
+navegar "atrás", un turno recién creado no aparecería en el listado hasta reiniciar la app. Se
+corrigió reemplazando `useEffect` por `useFocusEffect`, que recarga los datos cada vez que la
+pantalla vuelve a estar en foco, cumpliendo FR-011 y SC-004 (el turno creado debe verse
+inmediatamente en el listado).
+
+**Cómo lo verificamos**: `eslint` sin errores en los 4 archivos, y prueba manual en el teléfono:
+crear un turno nuevo con datos válidos y confirmar que aparece en el listado sin reiniciar la
+app; intentar guardar con campos vacíos o fecha pasada y confirmar que se rechaza con el mensaje
+correspondiente.
+
+**Commit**: `feat: T015-T018 - selector de servicio, formulario de alta y navegacion`
+
+### T019-T022 — (en progreso)
 
 
----
 
 ## 5. Conclusiones
+
