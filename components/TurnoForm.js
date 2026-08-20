@@ -37,6 +37,9 @@ function formatearHora(date) {
   return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 }
 
+// Tolerancia para que completar el formulario no invalide una fecha/hora "ahora" por defecto.
+const MARGEN_TOLERANCIA_MS = 5 * 60 * 1000;
+
 export default function TurnoForm({ turnoInicial, onSubmit }) {
   const modoEdicion = Boolean(turnoInicial);
 
@@ -78,8 +81,8 @@ export default function TurnoForm({ turnoInicial, onSubmit }) {
     if (!servicioId) {
       nuevosErrores.servicioId = 'Seleccioná un servicio.';
     }
-    if (fechaHora.getTime() < Date.now()) {
-      nuevosErrores.fechaHora = 'La fecha y hora no pueden ser anteriores al momento actual.';
+    if (!modoEdicion && fechaHora.getTime() < Date.now() - MARGEN_TOLERANCIA_MS) {
+      nuevosErrores.fechaHora = 'Elegí una fecha y hora que no sean anteriores al momento actual.';
     }
     setErrores(nuevosErrores);
     return Object.keys(nuevosErrores).length === 0;
