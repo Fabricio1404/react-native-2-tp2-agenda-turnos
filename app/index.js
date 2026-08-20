@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import EmptyState from '../components/EmptyState';
@@ -48,6 +49,7 @@ function ordenarPorHora(turnos) {
 }
 
 export default function ListadoTurnosScreen() {
+  const router = useRouter();
   const [vista, setVista] = useState(VISTA_DIA);
   const [turnos, setTurnos] = useState([]);
   const [mapaServicios, setMapaServicios] = useState({});
@@ -131,7 +133,11 @@ export default function ListadoTurnosScreen() {
           sections={secciones}
           keyExtractor={(turno) => turno.id}
           renderItem={({ item }) => (
-            <TurnoCard turno={item} nombreServicio={mapaServicios[item.servicioId] ?? 'Servicio'} />
+            <TurnoCard
+              turno={item}
+              nombreServicio={mapaServicios[item.servicioId] ?? 'Servicio'}
+              onPress={() => router.push(`/turno/${item.id}`)}
+            />
           )}
           renderSectionHeader={({ section }) =>
             vista === VISTA_SEMANA ? <Text style={styles.encabezadoSeccion}>{section.title}</Text> : null
