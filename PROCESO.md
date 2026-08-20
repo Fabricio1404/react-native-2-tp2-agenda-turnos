@@ -1,15 +1,194 @@
 # Documento del Proceso — Agenda de Turnos para Barbería (TP2, React Native II)
 
-**Integrantes**: Fabricio [apellido] y [compañero]
+**Integrantes**: Fabricio Augusto y Diego Cruz
 **Repositorio**: https://github.com/Fabricio1404/react-native-2-tp2-agenda-turnos
 
 ---
 
 ## 1. Investigación
 
-> (Completar acá las respuestas de la etapa 1 con sus propias palabras y fuentes citadas —
-> React Native, Expo, SDD, Agentes de código y skills, Mocks. Ya tenemos el material armado en
-> la conversación previa con Claude, solo falta pasarlo a este documento con las fuentes.)
+### React Native
+
+**¿Qué es y qué problema resuelve? ¿Cómo logra que código JavaScript termine mostrando componentes nativos?**
+
+React Native es un framework de Meta que permite escribir apps para iOS y Android usando
+JavaScript y React, evitando así mantener dos bases de código nativas por separado (una en
+Swift/Kotlin para cada plataforma). A diferencia de las apps híbridas basadas en WebView, React
+Native no dibuja HTML: cuando se declara un componente como `<View>` o `<Text>`, ese componente
+se traduce en un elemento nativo real de la plataforma (por ejemplo, un `UIView` en iOS).
+
+Históricamente, esa comunicación entre el código JavaScript y el código nativo se resolvía con
+un mecanismo llamado el **Bridge**: una cola de mensajes asincrónica que serializaba todo a JSON
+para pasar datos entre ambos lados. Este mecanismo generaba una sobrecarga de rendimiento
+porque cada actualización de UI o llamada a un módulo nativo debía serializarse, cruzar el
+puente y deserializarse del otro lado. Desde 2024, con la llamada **Nueva Arquitectura**
+(oficializada en React Native 0.76), el Bridge fue reemplazado por **JSI** (JavaScript
+Interface), que permite llamadas directas y sincrónicas en C++ sin pasar por JSON, junto con
+**Fabric** (el nuevo renderer) y **TurboModules** (carga perezosa de módulos nativos). Esto
+habilita funcionalidades modernas de React como Suspense y Transitions, y mejora sensiblemente
+el rendimiento de scroll y animaciones.
+
+*Fuentes: reactnative.dev/blog/2024/10/23/the-new-architecture-is-here (blog oficial de React
+Native); GeeksforGeeks, "What is a bridge in React Native?"
+(geeksforgeeks.org/what-is-a-bridge-in-react-native)*
+
+**Diferencia con nativo puro (Kotlin/Swift) y con híbridas basadas en web (Ionic, PWA)**
+
+- **Nativo puro**: máximo rendimiento y acceso total al hardware, pero exige mantener dos bases
+  de código separadas (una por plataforma), lo que encarece y alarga el desarrollo.
+- **React Native**: una sola base de código en JavaScript que se traduce a componentes nativos
+  reales — buen equilibrio entre rendimiento y velocidad de desarrollo.
+- **Híbridas (Ionic, PWA)**: la app corre dentro de un WebView (básicamente una página web
+  embebida). El desarrollo es muy rápido y simple, pero el rendimiento es notablemente inferior
+  y la interfaz no logra sentirse 100% nativa.
+
+**3 apps conocidas hechas con React Native**: Instagram, Discord y partes de la propia app de
+Facebook.
+
+---
+
+### Expo
+
+**¿Qué agrega Expo sobre React Native "pelado"? ¿Qué es Expo Go?**
+
+Expo es un conjunto de herramientas construido sobre React Native que elimina gran parte de la
+configuración nativa manual (Android Studio, Xcode, SDKs) necesaria para arrancar un proyecto.
+Expo Go es la aplicación cliente que permite escanear un código QR y ver el proyecto corriendo
+en un dispositivo físico real de forma instantánea, sin necesidad de compilar una build nativa
+propia — motivo por el cual se usó en este TP para probar cada tarea en el celular.
+
+*Fuente: docs.expo.dev/workflow/overview ("Develop an app with Expo", documentación oficial)*
+
+**¿Qué es expo-router y cómo maneja la navegación?**
+
+Expo Router es un framework de navegación "opinado" para React Native, en el mismo sentido en
+que Next.js lo es para React web: en vez de configurar manualmente las pilas de navegación, cada
+archivo dentro de la carpeta `app/` se convierte automáticamente en una ruta de la aplicación.
+Por ejemplo, un archivo `app/turno/[id].js` genera automáticamente una ruta dinámica capaz de
+recibir un identificador (`/turno/123`). Por debajo, Expo Router sigue usando React Navigation
+para manejar las transiciones, pilas y layouts — lo que aporta es la capa de convención de
+archivos que evita configurar esa navegación a mano.
+
+*Fuente: docs.expo.dev/router/introduction (Documentación oficial de Expo Router);
+docs.expo.dev/router/basics/core-concepts*
+
+**¿Cuándo conviene usar Expo y qué limitaciones tiene?**
+
+Conviene prácticamente en cualquier proyecto nuevo, en particular en prototipos, MVPs o TPs como
+este, donde no se necesitan módulos nativos muy específicos. La limitación más relevante aparece
+cuando se necesita código nativo personalizado que Expo Go no soporta de fábrica: en ese caso
+hay que salir del flujo simple y crear una *development build* propia.
+
+---
+
+### SDD — Spec-Driven Development
+
+**¿Qué es el desarrollo guiado por especificaciones y por qué apareció junto con los agentes de
+IA? ¿Qué es el "vibe coding" y qué problemas trae?**
+
+El "vibe coding" es el patrón de describirle una idea suelta a un agente de IA y aceptar el
+código que devuelve sin mucho control estructurado. Funciona bien para prototipos rápidos, pero
+se vuelve poco confiable en proyectos serios: el código puede no compilar, resolver solo una
+parte del problema real, o adoptar una arquitectura distinta a la que el equipo hubiera elegido.
+
+El **Spec-Driven Development (SDD)** surgió como respuesta a ese problema, en paralelo al
+crecimiento de los agentes de codificación (Copilot, Claude Code, Gemini CLI, etc.). La premisa
+central que resume GitHub es que las especificaciones no están al servicio del código, sino que
+el código es un artefacto generado al servicio de las especificaciones: primero se define con
+claridad el qué y el por qué, y recién entonces el agente resuelve el cómo, verificando en cada
+paso en lugar de revisar un bloque enorme de código generado de una sola vez.
+
+*Fuentes: github.blog/ai-and-ml/generative-ai/spec-driven-development-with-ai-get-started-with-a-new-open-source-toolkit
+(blog oficial de GitHub, anuncio de Spec Kit); den.dev/blog/github-spec-kit*
+
+**¿Cuál es el flujo típico de SDD?**
+
+Reglas del proyecto (constitution) → especificación (spec) → plan técnico (plan) → tareas
+(tasks) → implementación. Es el flujo que se siguió en este TP con los comandos
+`/speckit-constitution`, `/speckit-specify`, `/speckit-plan`, `/speckit-tasks` y
+`/speckit-implement`.
+
+**Herramientas: GitHub Spec Kit y Kiro**
+
+- **GitHub Spec Kit**: toolkit open source publicado por GitHub en septiembre de 2025. Instala
+  un CLI (`specify`) que scaffoldea en el repositorio una carpeta `.specify/` con templates y
+  scripts, y agrega comandos de barra (`/speckit-*`) al agente de IA elegido. Mantiene un
+  entendimiento persistente del proyecto: cada comando nuevo lee automáticamente la constitution,
+  la spec y el plan ya generados, en vez de partir de cero en cada interacción. Es
+  agnóstico del agente: soporta más de 30 integraciones distintas (Claude Code, GitHub Copilot,
+  Cursor, Gemini CLI, entre otros).
+
+- **Kiro (AWS)**: IDE agéntico (basado en un fork de VS Code / Code OSS) construido alrededor
+  del mismo concepto. En vez de saltar directo de un prompt al código, agrega una capa de
+  planificación estructurada que separa el pensar del hacer: por cada feature genera tres
+  documentos (`requirements.md`, `design.md`, `tasks.md`), y solo después de que el desarrollador
+  los revisa y aprueba, se habilita la implementación. Corre sobre Amazon Bedrock y permite elegir
+  entre distintos modelos, incluyendo modelos de Anthropic.
+
+*Fuentes: github.com/github/spec-kit (repositorio oficial); kiro.dev (sitio oficial de Kiro);
+aws.plainenglish.io/what-is-spec-driven-development-and-how-to-implement-it-with-kiro*
+
+**¿Con qué agentes de IA funcionan?**
+
+Ambas herramientas son agnósticas del modelo: Spec Kit funciona con más de 30 agentes distintos
+(Claude Code, GitHub Copilot, Cursor, Gemini CLI, Windsurf, Codex CLI, entre otros), y Kiro
+soporta modelos de Claude además de otros modelos propios de AWS.
+
+---
+
+### Agentes de código y skills
+
+**¿Qué es un agente de código y en qué se diferencia de un chat común?**
+
+Un chat de IA convencional solo devuelve texto como respuesta. Un agente de código (Claude Code,
+GitHub Copilot, Cursor, Gemini CLI) puede además *actuar sobre el entorno real*: leer archivos
+del proyecto, ejecutar comandos de terminal, crear y editar archivos, correr linters o tests, y
+repetir ese ciclo de forma autónoma hasta resolver la tarea — no solo sugiere código, sino que lo
+aplica y puede verificarlo.
+
+**¿Para qué sirven los archivos de contexto como AGENTS.md o CLAUDE.md?**
+
+Son archivos Markdown que funcionan como un briefing persistente para el agente: en ellos se
+documentan las convenciones del proyecto, el stack elegido, y patrones específicos que el agente
+no podría inferir mirando solo el código (por ejemplo, "no usar TypeScript" o "los mocks
+simulan 500-1000ms de latencia"). AGENTS.md es un formato abierto pensado para que cualquier
+agente de codificación lo lea, mientras que CLAUDE.md cumple la misma función específicamente
+para Claude Code. Herramientas como Kiro también son compatibles con este mismo formato.
+
+*Fuente: kiro.dev — mención de soporte de AGENTS.md y Skills.md*
+
+**¿Qué son las skills de un agente? ¿Dónde se consiguen y cómo se instalan?**
+
+Una skill es una carpeta que contiene un archivo `SKILL.md` con instrucciones específicas para
+una tarea recurrente, junto con código de referencia o scripts auxiliares. El agente carga esas
+instrucciones completas solo cuando detecta que la tarea actual es relevante para esa skill, en
+vez de tenerlas siempre presentes ocupando contexto. En este TP, al instalar GitHub Spec Kit con
+integración a Claude Code, la propia herramienta instaló un conjunto de skills en
+`.claude/skills/` (una por cada comando `/speckit-*`), que es la forma en que Spec Kit expone su
+flujo de trabajo dentro de Claude Code.
+
+*Fuente: marktechpost.com/2026/05/08/meet-github-spec-kit — menciona explícitamente que, para
+agentes como Claude Code, Spec Kit instala skills en vez de archivos de prompt de barra*
+
+---
+
+### Mocks
+
+**¿Qué es un mock y por qué permite desarrollar un frontend completo sin backend?**
+
+Un mock es una simulación de un servicio que todavía no existe (en este caso, un backend real).
+En vez de consultar una API real, se usan funciones que devuelven datos fijos o generados,
+imitando la forma y el comportamiento de lo que la API real devolvería — incluyendo una demora
+artificial para simular la latencia de red. Esto permite construir toda la interfaz, la
+navegación y el manejo de estados (carga, vacío, error) sin depender de que el backend esté
+terminado. El día que exista un backend real, alcanza con reemplazar esa capa de mocks por
+llamadas reales, sin tener que tocar el resto de la app.
+
+**Estrategias usadas en este proyecto**: se optó por un **servicio simulado con Promise +
+setTimeout** (`services/turnosService.js` y `services/serviciosService.js`), con el array de
+turnos viviendo como variable de módulo (singleton, por cómo funcionan los módulos ES en
+JavaScript) para que todas las pantallas compartan el mismo estado durante la sesión, sin
+necesidad de Context ni una librería de estado externa.
 
 ---
 
@@ -408,5 +587,4 @@ servicio/estado y los tabs Día/Semana.
 resuelto de forma definitiva y centralizada.**
 
 ---
-
 
