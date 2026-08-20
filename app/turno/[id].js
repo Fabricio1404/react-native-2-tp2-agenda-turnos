@@ -1,6 +1,6 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import EmptyState from '../../components/EmptyState';
 import LoadingState from '../../components/LoadingState';
 import TurnoCard from '../../components/TurnoCard';
@@ -21,28 +21,31 @@ function formatearFecha(fechaStr) {
 
 export default function DetalleTurnoScreen() {
   const { id } = useLocalSearchParams();
+  const router = useRouter();
   const [turno, setTurno] = useState(null);
   const [mapaServicios, setMapaServicios] = useState({});
   const [cargando, setCargando] = useState(true);
 
-  useEffect(() => {
-    let activo = true;
-    setCargando(true);
-    Promise.all([getTurnoById(id), getServicios()]).then(([turnoCargado, servicios]) => {
-      if (!activo) return;
-      setTurno(turnoCargado);
-      setMapaServicios(
-        servicios.reduce((mapa, servicio) => {
-          mapa[servicio.id] = servicio.nombre;
-          return mapa;
-        }, {})
-      );
-      setCargando(false);
-    });
-    return () => {
-      activo = false;
-    };
-  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      let activo = true;
+      setCargando(true);
+      Promise.all([getTurnoById(id), getServicios()]).then(([turnoCargado, servicios]) => {
+        if (!activo) return;
+        setTurno(turnoCargado);
+        setMapaServicios(
+          servicios.reduce((mapa, servicio) => {
+            mapa[servicio.id] = servicio.nombre;
+            return mapa;
+          }, {})
+        );
+        setCargando(false);
+      });
+      return () => {
+        activo = false;
+      };
+    }, [id])
+  );
 
   if (cargando) {
     return <LoadingState mensaje="Cargando turno..." />;
@@ -59,7 +62,20 @@ export default function DetalleTurnoScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: turno.clienteNombre }} />
+      <Stack.Screen
+        options={{
+          title: turno.clienteNombre,
+          headerRight: () => (
+            <Pressable
+              onPress={() => router.push(`/turno/editar/${turno.id}`)}
+              hitSlop={8}
+              style={styles.botonEditar}
+            >
+              <Text style={styles.botonEditarTexto}>Editar</Text>
+            </Pressable>
+          ),
+        }}
+      />
       <TurnoCard
         turno={turno}
         nombreServicio={mapaServicios[turno.servicioId] ?? 'Servicio'}
@@ -98,5 +114,14 @@ const styles = StyleSheet.create({
   valor: {
     fontSize: 15,
     color: '#222',
+  },
+  botonEditar: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  botonEditarTexto: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#007aff',
   },
 });

@@ -1,6 +1,8 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ESTADOS_TURNO } from '../constants/estadosTurno';
+import EstadoSelector from './EstadoSelector';
 import ServicioSelector from './ServicioSelector';
 
 function pad(numero) {
@@ -36,11 +38,14 @@ function formatearHora(date) {
 }
 
 export default function TurnoForm({ turnoInicial, onSubmit }) {
+  const modoEdicion = Boolean(turnoInicial);
+
   const [clienteNombre, setClienteNombre] = useState(turnoInicial?.clienteNombre ?? '');
   const [servicioId, setServicioId] = useState(turnoInicial?.servicioId ?? null);
   const [fechaHora, setFechaHora] = useState(() =>
     turnoInicial ? fechaHoraDesdeStrings(turnoInicial.fecha, turnoInicial.hora) : new Date()
   );
+  const [estado, setEstado] = useState(turnoInicial?.estado ?? ESTADOS_TURNO.PENDIENTE);
   const [mostrarPickerFecha, setMostrarPickerFecha] = useState(false);
   const [mostrarPickerHora, setMostrarPickerHora] = useState(false);
   const [errores, setErrores] = useState({});
@@ -82,12 +87,16 @@ export default function TurnoForm({ turnoInicial, onSubmit }) {
 
   function manejarConfirmar() {
     if (!validar()) return;
-    onSubmit({
+    const datos = {
       clienteNombre: clienteNombre.trim(),
       servicioId,
       fecha: aFechaString(fechaHora),
       hora: aHoraString(fechaHora),
-    });
+    };
+    if (modoEdicion) {
+      datos.estado = estado;
+    }
+    onSubmit(datos);
   }
 
   return (
@@ -129,8 +138,17 @@ export default function TurnoForm({ turnoInicial, onSubmit }) {
         )}
       </View>
 
+      {modoEdicion && (
+        <View style={styles.campo}>
+          <Text style={styles.etiqueta}>Estado</Text>
+          <EstadoSelector estadoSeleccionado={estado} onSeleccionar={setEstado} />
+        </View>
+      )}
+
       <Pressable style={styles.botonGuardar} onPress={manejarConfirmar}>
-        <Text style={styles.botonGuardarTexto}>Guardar turno</Text>
+        <Text style={styles.botonGuardarTexto}>
+          {modoEdicion ? 'Guardar cambios' : 'Guardar turno'}
+        </Text>
       </Pressable>
     </View>
   );
