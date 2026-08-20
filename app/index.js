@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { router, useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import EmptyState from '../components/EmptyState';
 import LoadingState from '../components/LoadingState';
@@ -9,6 +9,11 @@ import { getTurnos } from '../services/turnosService';
 
 export const options = {
   title: 'Agenda de Turnos',
+  headerRight: () => (
+    <Pressable onPress={() => router.push('/turno/nuevo')} hitSlop={8} style={styles.botonNuevo}>
+      <Text style={styles.botonNuevoTexto}>+ Nuevo</Text>
+    </Pressable>
+  ),
 };
 
 const VISTA_DIA = 'dia';
@@ -70,9 +75,11 @@ export default function ListadoTurnosScreen() {
       .finally(() => setCargando(false));
   }, []);
 
-  useEffect(() => {
-    cargarDatos();
-  }, [cargarDatos]);
+  useFocusEffect(
+    useCallback(() => {
+      cargarDatos();
+    }, [cargarDatos])
+  );
 
   if (cargando) {
     return <LoadingState mensaje="Cargando turnos..." />;
@@ -190,5 +197,14 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginHorizontal: 16,
     marginBottom: 4,
+  },
+  botonNuevo: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  botonNuevoTexto: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#007aff',
   },
 });
